@@ -84,6 +84,7 @@ export interface Project {
   updatedAt: string;
   // Joined fields (included by the API)
   clientName?: string;
+  clientEmail?: string;
   leadEmail?: string;
 }
 

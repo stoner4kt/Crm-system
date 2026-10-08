@@ -16,6 +16,7 @@ import { projectsRoutes } from './routes/projects.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { settingsRoutes } from './routes/settings.js';
 import { capturesRoutes } from './routes/captures.js';
+import { integrationRoutes } from './routes/integration.js';
 
 export function createApp(): express.Express {
   const app = express();
@@ -48,6 +49,7 @@ export function createApp(): express.Express {
   app.use('/api/settings', settingsRoutes(store));
   app.use('/api/capture', capturesRoutes(store));
   app.use('/api/captures', capturesRoutes(store));
+  app.use('/api/integration', integrationRoutes(store));
 
   // Serve the built client in production.
   const clientDist = path.resolve(process.cwd(), '../client/dist');

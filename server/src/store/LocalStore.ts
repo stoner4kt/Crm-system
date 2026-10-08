@@ -639,6 +639,7 @@ function enrichProject(
   return {
     ...p,
     clientName: client ? `${client.firstName} ${client.lastName}`.trim() : 'Unknown client',
+    clientEmail: client?.email ?? undefined,
     leadEmail: lead?.email,
   };
 }

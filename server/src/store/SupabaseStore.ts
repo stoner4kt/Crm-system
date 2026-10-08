@@ -309,7 +309,7 @@ export class SupabaseStore implements Store {
     this.assertSet();
     let q = this.sb
       .from('projects')
-      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name), leads(email)`)
+      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name,email), leads(email)`)
       .eq('user_id', userId);
     if (filters.status) q = q.eq('status', filters.status);
     if (filters.clientId) q = q.eq('client_id', filters.clientId);
@@ -322,7 +322,7 @@ export class SupabaseStore implements Store {
     this.assertSet();
     const { data, error } = await this.sb
       .from('projects')
-      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name), leads(email)`)
+      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name,email), leads(email)`)
       .eq('id', projectId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -348,7 +348,7 @@ export class SupabaseStore implements Store {
         est_value: input.estValue ?? 0,
         notes: input.notes ?? '',
       })
-      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name), leads(email)`)
+      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name,email), leads(email)`)
       .single();
     if (error) throw new Error(`createProject failed: ${error.message}`);
     return mapProject(data);
@@ -378,7 +378,7 @@ export class SupabaseStore implements Store {
       .update(body)
       .eq('id', projectId)
       .eq('user_id', userId)
-      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name), leads(email)`)
+      .select(`${PROJECT_COLUMNS}, clients(first_name,last_name,email), leads(email)`)
       .maybeSingle();
     if (error) throw new Error(`updateProject failed: ${error.message}`);
     return data ? mapProject(data) : null;
@@ -563,7 +563,7 @@ function mapClient(row: Record<string, unknown>): Client {
 
 function mapProject(row: Record<string, unknown>): Project {
   const related = row as typeof row & {
-    clients?: { first_name?: string; last_name?: string } | null;
+    clients?: { first_name?: string; last_name?: string; email?: string } | null;
     leads?: { email?: string } | null;
   };
   return {
@@ -586,6 +586,7 @@ function mapProject(row: Record<string, unknown>): Project {
     clientName: related.clients
       ? `${related.clients.first_name ?? ''} ${related.clients.last_name ?? ''}`.trim() || 'Unknown client'
       : 'Unknown client',
+    clientEmail: related.clients?.email ?? undefined,
     leadEmail: related.leads?.email ?? undefined,
   };
 }

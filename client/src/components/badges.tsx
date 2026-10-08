@@ -38,6 +38,22 @@ export function PriorityBadge({ priority }: { priority: ProjectPriority }) {
   return <Badge label={priority} tone={priorityTone[priority]} />;
 }
 
+// ReviewFlow review-state badge (combined dashboard only).
+const reviewTone: Record<string, string> = {
+  new: 'slate',
+  in_progress: 'cyan',
+  complete: 'emerald',
+  review_sent: 'amber',
+  cancelled: 'rose',
+  unknown: 'slate',
+};
+
+export function ReviewStatusBadge({ status }: { status: string | null }) {
+  const key = status && reviewTone[status] ? status : 'unknown';
+  const label = status ? status.replace('_', ' ') : 'No review data';
+  return <Badge label={`Review · ${label}`} tone={reviewTone[key] || 'slate'} />;
+}
+
 export const LEAD_STATUSES: LeadStatus[] = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 export const PROJECT_STATUSES: ProjectStatus[] = ['new', 'scheduled', 'in_progress', 'on_hold', 'completed', 'cancelled'];
 export const PROJECT_PRIORITIES: ProjectPriority[] = ['low', 'normal', 'high', 'urgent'];

@@ -2,7 +2,15 @@ import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
 
-dotenv.config();
+// Safe on Cloudflare Workers: there is no .env file and dotenv's fs lookup
+// would surface an ENOENT. The Worker runtime populates process.env itself when
+// nodejs_compat_populate_process_env is enabled, so a silent no-op is correct.
+try {
+  dotenv.config();
+} catch {
+  // ignore — .env is a Node-only convenience.
+
+}
 
 // ---------------------------------------------------------------------------
 // Config — all env vars are optional. The server runs with sensible defaults.
@@ -47,6 +55,18 @@ export const config = {
   captureSecret: process.env.CAPTURE_SECRET || '',
   // When empty, the capture endpoint is open (like a public form).
   requireCaptureSecret: bool(process.env.REQUIRE_CAPTURE_SECRET, false),
+
+  // ReviewFlow integration (Task C/D). Omit all of these for a pure-CRM deploy.
+  reviewflow: {
+    // The ReviewFlow site name (e.g. https://<project>.supabase.co or a custom
+    // domain routed to the /functions/v1 edge functions).
+    url: process.env.REVIEWFLOW_URL || '',
+    secret: process.env.REVIEWFLOW_SECRET || '',
+    // Feature flag — outbound notifications only fire when a URL + secret are set。
+    enabled: Boolean(process.env.REVIEWFLOW_URL && process.env.REVIEWFLOW_SECRET),
+    // Send review email automatically when a CRM project is completed.
+    autoSend: bool(process.env.REVIEWFLOW_AUTO_SEND, true),
+  },
 };
 
 export function loadSecretsHelpText(): string {

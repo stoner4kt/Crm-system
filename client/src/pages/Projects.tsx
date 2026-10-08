@@ -4,7 +4,7 @@ import { ApiError } from '../lib/api.js';
 import type { Client, Project, ProjectPriority, ProjectStatus } from '../types/api.js';
 import { Alert, Button, Card, EmptyState, Field, Input, Select, Spinner, Textarea } from '../components/ui.js';
 import { Modal } from '../components/Modal.js';
-import { PROJECT_PRIORITIES, PROJECT_STATUSES, PriorityBadge, ProjectStatusBadge, fmtDate, fmtMoney } from '../components/badges.js';
+import { PROJECT_PRIORITIES, PROJECT_STATUSES, PriorityBadge, ProjectStatusBadge, ReviewStatusBadge, fmtDate, fmtMoney } from '../components/badges.js';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[] | null>(null);
@@ -77,6 +77,25 @@ function ProjectCard({ project, onChanged, onError }: { project: Project; onChan
   const [sendBox, setSendBox] = useState(false);
   const [message, setMessage] = useState('');
   const [sendState, setSendState] = useState<'idle' | 'busy' | 'done'>('idle');
+  // ReviewFlow integration (combined dashboard only; guarded by client flag).
+  const [review, setReview] = useState<{ status: string | null; busy: boolean } | null>(null);
+  const reviewsEnabled = api.isReviewsIntegrationEnabled();
+
+  // The review badge keys on the client's email; falls back to the lead email when
+  // the project was auto-created from a won lead. This effect is safe because the
+  // flag is a build-time constant..
+  useEffect(() => {
+    if (!reviewsEnabled) return;
+    const email = project.clientEmail ?? project.leadEmail;
+    if (!email) return;
+    let cancelled = false;
+    api.getReviewStatus(email).then((res) => {
+      if (cancelled) return;
+      const lead = res.status?.leads?.[0];
+      setReview({ status: lead?.status ?? null, busy: false });
+    }).catch(() => { if (!cancelled) setReview({ status: null, busy: false }); });
+    return () => { cancelled = true; };
+  }, [reviewsEnabled, project.clientEmail, project.leadEmail]);
 
   const advance = async (patch: Partial<Project>) => {
     try {
@@ -97,6 +116,20 @@ function ProjectCard({ project, onChanged, onError }: { project: Project; onChan
     } catch (e) {
       onError(e instanceof Error ? e.message : 'Failed to send update');
       setSendState('idle');
+    }
+  };
+
+  const sendReview = async () => {
+    const email = project.clientEmail ?? project.leadEmail;
+    if (!email) { onError('No contact email available for this project'); return; }
+    setReview((r) => r ? { ...r, busy: true } : { status: null, busy: true });
+    try {
+      await api.sendReviewRequest(email, project.id);
+      setReview((r) => r ? { ...r, busy: false, status: 'review_sent' } : { status: 'review_sent', busy: false });
+      onError('');
+    } catch (e) {
+      onError(e instanceof Error ? e.message : 'Failed to send review request');
+      setReview((r) => r ? { ...r, busy: false } : { status: null, busy: false });
     }
   };
 
@@ -123,6 +156,7 @@ function ProjectCard({ project, onChanged, onError }: { project: Project; onChan
         <div className="flex items-center gap-1.5">
           <PriorityBadge priority={project.priority} />
           <ProjectStatusBadge status={project.status} />
+          {review?.status ? <ReviewStatusBadge status={review.status} /> : null}
         </div>
       </div>
 
@@ -152,6 +186,11 @@ function ProjectCard({ project, onChanged, onError }: { project: Project; onChan
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => setSendBox((v) => !v)}>Email client</Button>
+          {reviewsEnabled ? (
+            <Button size="sm" variant="secondary" onClick={sendReview} disabled={review?.busy}>
+              {review?.busy ? 'Sending…' : 'Send Review Request'}
+            </Button>
+          ) : null}
           <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>Edit</Button>
           <Button size="sm" variant="danger" onClick={del}>Delete</Button>
         </div>

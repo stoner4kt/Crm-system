@@ -63,6 +63,7 @@ export interface Project {
   userId: string;
   clientId: string;
   clientName?: string;
+  clientEmail?: string;
   leadId?: string | null;
   leadEmail?: string;
   title: string;
@@ -117,6 +118,27 @@ export interface EmailLog {
   provider: 'resend' | 'console';
   sentAt: string;
 }
+
+// ---- ReviewFlow integration (combined dashboard only) ----
+export interface ReviewLeadInfo {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  service: string | null;
+  status: string;
+  created_at: string | null;
+  completed_at: string | null;
+  review_send_after: string | null;
+}
+export interface ReviewFlowStatus {
+  email: string;
+  found: boolean;
+  matchedAt: string | null;
+  leads: ReviewLeadInfo[];
+}
+export type ReviewStatusPayload = { status: ReviewFlowStatus | null };
+export type SendReviewPayload = { ok: boolean; status?: number; error?: string };
 
 export interface DashboardStats {
   totalLeads: number;

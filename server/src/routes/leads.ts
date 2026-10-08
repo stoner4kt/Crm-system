@@ -4,6 +4,7 @@ import { leadCreateSchema, leadUpdateSchema, sendWelcomeSchema } from '../utils/
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
 import type { Store } from '../store/Store.js';
 import { sendEmail } from '../services/emailService.js';
+import { notifyLeadWon } from '../services/reviewFlowService.js';
 import type { LeadStatus } from '../types/domain.js';
 
 export function leadsRoutes(store: Store): Router {
@@ -93,6 +94,17 @@ export function leadsRoutes(store: Store): Router {
           },
           leadId: lead.id,
           clientId,
+        });
+        // ReviewFlow integration — fire-and-forget, never blocks the response.
+        notifyLeadWon({
+          email: lead.email,
+          first_name: lead.firstName || null,
+          last_name: lead.lastName || null,
+          phone: lead.phone || null,
+          service: typeof lead.service === 'string' ? lead.service : null,
+          message: 'Won lead from CRM',
+          source: 'crm',
+          external_id: projectId,
         });
         res.json({ lead, converted: { clientId, projectId } });
         return;

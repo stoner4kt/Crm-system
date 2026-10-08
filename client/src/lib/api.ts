@@ -1,3 +1,5 @@
+import type { ReviewStatusPayload, SendReviewPayload } from '../types/api.js';
+
 export class ApiError extends Error {
   status: number;
   fields?: Record<string, unknown>;
@@ -138,3 +140,17 @@ export const listCaptures = () =>
 
 export const listEmailLogs = () =>
   request<{ emailLogs: import('../types/api.js').EmailLog[] }>('/captures/emails');
+
+// ---- ReviewFlow integration (404s when the flag / env vars are absent; call
+// guards are in the pages so a pure-CRM build never hits these) ----
+export const isReviewsIntegrationEnabled = (): boolean =>
+  import.meta.env.VITE_ENABLE_REVIEWS_INTEGRATION === 'true';
+
+export const getReviewStatus = (email: string) =>
+  request<ReviewStatusPayload>(`/integration/reviews/status?email=${encodeURIComponent(email)}`);
+
+export const sendReviewRequest = (email: string, externalId: string) =>
+  request<SendReviewPayload>('/integration/reviews/send', {
+    method: 'POST',
+    body: JSON.stringify({ email, externalId }),
+  });

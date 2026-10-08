@@ -4,6 +4,7 @@ import { projectCreateSchema, projectUpdateSchema, sendProjectUpdateSchema } fro
 import { requireAuth, type AuthedRequest } from '../middleware/auth.js';
 import type { Store } from '../store/Store.js';
 import { sendEmail } from '../services/emailService.js';
+import { notifyProjectCompleted } from '../services/reviewFlowService.js';
 import type { ProjectStatus } from '../types/domain.js';
 
 export function projectsRoutes(store: Store): Router {
@@ -58,6 +59,25 @@ export function projectsRoutes(store: Store): Router {
       if (!existing) return sendError(res, 404, 'Project not found');
 
       const project = await store.updateProject(userId, req.params.id, parsed.data);
+
+      // ReviewFlow integration - when a project flips to 'completed', mirror it
+      // into ReviewFlow and (optionally) fire the review email. Fire-and-forget;
+      // never blocks or fails the CRM update request.
+
+      if (project && parsed.data.status === 'completed' && existing.status !== 'completed') {
+        const client = await store.getClient(userId, project.clientId);
+        notifyProjectCompleted({
+          email: client?.email || '',
+          first_name: client?.firstName || null,
+          last_name: client?.lastName || null,
+          phone: client?.phone || null,
+          service: project.title || null,
+          message: 'Completed project from CRM',
+          source: 'crm',
+          external_id: project.id,
+        });
+      }
+
       res.json({ project });
     }),
   );

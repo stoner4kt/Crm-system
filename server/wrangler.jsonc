@@ -1,0 +1,28 @@
+{
+  // TradePro CRM API - Cloudflare Workers deployment.
+  // Express runs inside the Worker via the node:http compatibility layer.
+  // Deploy:  npm run deploy:worker  (or  wrangler deploy --config wrangler.jsonc)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tradepro-crm-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-08-16",
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  // Vars below apply to every environment. Secrets (SUPABASE_SERVICE_KEY,
+  // RESEND_API_KEY, JWT_SECRET, REVIEWFLOW_SECRET, CAPTURE_SECRET) must be
+  // added via wrangler secret put (never committed) or the dashboard.
+  "vars": {
+    "NODE_ENV": "production",
+    "PORT": "3000",
+    "CORS_ORIGIN": "*",
+    "LOG_LEVEL": "info",
+    // Enable the data layer + auth mode.
+    "SUPABASE_URL": "",
+    "SUPABASE_ANON_KEY": "",
+    // Reviews integration (omit for a pure-CRM deploy)...
+    "REVIEWFLOW_URL": "",
+    "REVIEWFLOW_SECRET": ""
+  },
+  "observability": {
+    "enabled": true
+  }
+}

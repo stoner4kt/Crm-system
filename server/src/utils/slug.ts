@@ -8,8 +8,8 @@ export function slugify(input: string): string {
 }
 
 export function idOf(): string {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
+  if (crypto?.randomUUID) {
+    return crypto.randomUUID();
   }
   // Node 20+ has crypto.randomUUID; keep a fallback for exotic environments.
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
