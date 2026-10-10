@@ -86,20 +86,25 @@ begin
     'total_clients',     (select count(*) from public.clients where user_id = owner_id),
     'emails_sent',       (select count(*) from public.email_logs where user_id = owner_id),
     'recent_leads',      coalesce((
-        select jsonb_agg(row_to_json(t) order by t.created_at desc limit 5)
+        select jsonb_agg(x order by x.created_at desc)
         from (
           select id, first_name, last_name, email, phone, service, status, estimated_value, created_at
-          from public.leads where user_id = owner_id
-        ) t), '[]'::jsonb),
+          from public.leads
+          where user_id = owner_id
+          order by created_at desc
+          limit 5
+        ) x), '[]'::jsonb),
     'recent_projects',   coalesce((
-        select jsonb_agg(row_to_json(t) order by t.updated_at desc limit 5)
+        select jsonb_agg(x order by x.updated_at desc)
         from (
           select p.id, p.title, p.status, p.priority, p.est_value, p.requested_date, p.scheduled_date, p.updated_at,
                  c.first_name || ' ' || c.last_name as client_name
           from public.projects p
           left join public.clients c on c.id = p.client_id
           where p.user_id = owner_id
-        ) t), '[]'::jsonb)
+          order by p.updated_at desc
+          limit 5
+        ) x), '[]'::jsonb)
   ) into v_stats;
   return v_stats;
 end;
