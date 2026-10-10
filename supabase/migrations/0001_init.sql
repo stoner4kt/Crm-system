@@ -8,13 +8,6 @@
 create extension if not exists "uuid-ossp";
 
 -- ----------------------------------------------------------------------------
--- App metadata for the Supabase dashboard / UI
--- ----------------------------------------------------------------------------
-insert into auth.config (key, value)
-values ('jwt_expiry', '3600')
-on conflict do nothing;
-
--- ----------------------------------------------------------------------------
 -- Profiles (1:1 with auth.users, mirrored automatically via trigger)
 -- ----------------------------------------------------------------------------
 create table if not exists public.profiles (
