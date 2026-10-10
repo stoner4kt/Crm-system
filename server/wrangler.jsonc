@@ -5,7 +5,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tradepro-crm-api",
   "main": "src/worker.ts",
-  "compatibility_date": "2025-08-16",
+  "compatibility_date": "2026-08-04",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   // Vars below apply to every environment. Secrets (SUPABASE_SERVICE_KEY,
   // RESEND_API_KEY, JWT_SECRET, REVIEWFLOW_SECRET, CAPTURE_SECRET) must be
