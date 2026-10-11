@@ -7,9 +7,8 @@ This guide puts the whole app on Cloudflare using **two pieces**:
 | **Cloudflare Worker** | The API (Express backend in `server/`) | `https://tradepro-crm-api.<your-subdomain>.workers.dev` |
 | **Cloudflare Pages** | The dashboard (React app in `client/`) | `https://tradepro-dashboard.pages.dev` |
 
-The dashboard talks to the API through a proxy rule, so the browser only ever
-talks to your Pages domain. Secrets stay on the Worker — nothing gets shipped
-to the browser.
+The dashboard talks to the API **directly** via `VITE_API_URL` (the worker
+URL). Secrets stay on the Worker — nothing gets shipped to the browser.
 
 Work through the parts **top to bottom, in order**:
 
@@ -267,39 +266,47 @@ Then click **Save and Deploy**.
 > finished site lands in `client/dist`, which is exactly the folder Pages
 > publishes to its CDN.
 
-### Step 4.3 Make the dashboard routes and the API proxy work
+### Step 4.3 Make the dashboard routes and the API reachable
 
 Your dashboard uses URLs like `/projects` and `/leads`. Without a rewrite rule,
-refreshing on one of those URLs returns a 404. The dashboard also calls the API
-at `/api/...`, which must be forwarded to your Worker.
+refreshing on one of those URLs returns a 404. The `client/public/_redirects`
+file already in the repo handles the SPA fallback (`/* → /index.html 200`).
 
-Do this once, in the repo:
+> **Why the API is NOT proxied through `_redirects`:** Cloudflare Pages is a
+> static host. Its `_redirects` engine returns **405 Method Not Allowed** for
+> POST/PATCH/OPTIONS requests — even with a `200` proxy rewrite. So the
+> dashboard must call the Worker **directly**, cross-origin, using the
+> `VITE_API_URL` build environment variable.
 
-1. Create the folder `client/public/`.
-2. Inside it create a file named `_redirects` (no file extension) with exactly
-   this content — replace the worker URL with yours:
+Do this once, in the repo (already committed, but verify on your copy):
+
+1. Ensure `client/src/lib/api.ts` uses the `VITE_API_URL` base:
+
+   ```ts
+   const base = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+   const res = await fetch(`${base}/api${path}`, { ...options, headers });
+   ```
+
+2. Ensure `client/public/_redirects` only contains the SPA fallback:
 
    ```text
-   /api/*  https://tradepro-crm-api.<your-subdomain>.workers.dev/api/:splat  200
    /*      /index.html  200
    ```
 
-3. Commit and push:
+   (No `/api/*` rule — Pages would 405 the POST/PATCH calls.)
 
-   ```bash
-   git add client/public/_redirects
-   git commit -m "Add Pages redirects for SPA routing and API proxy"
-   git push
-   ```
+3. In the **Pages project → Settings → Environment variables**, add a
+   production variable:
 
-Pushing triggers a new Pages build automatically.
+   | Name | Value |
+   |---|---|
+   | `VITE_API_URL` | `https://tradepro-crm-api.<your-subdomain>.workers.dev` |
 
-> Here is what the two rules do:
-> - Rule 1 forwards every `/api/...` request to your Worker and returns the
->   response. The browser never makes a cross-origin call, so you avoid CORS
->   errors entirely for the dashboard's normal usage.
-> - Rule 2 sends every other URL to `index.html` so React Router can handle
->   `/projects`, `/leads`, etc.
+   Vite inlines it at build time; after changing it you must redeploy the
+   Pages project (Settings → Builds & deployments → retry, or push again).
+
+> The SPA fallback rule sends every non-API URL to `index.html` so React Router
+> can handle `/projects`, `/leads`, etc.
 
 ### Step 4.4 Get your dashboard URL and lock down CORS
 
@@ -321,6 +328,8 @@ Pushing triggers a new Pages build automatically.
 
 > Locking CORS to your dashboard address stops other websites from calling your
 > API. If you use a custom domain later, set it to that instead.
+> The browser calls the Worker cross-origin now, so CORS must allow the
+> dashboard origin — `credentials: true` is already set on the API server.
 
 ---
 
@@ -331,7 +340,8 @@ Pushing triggers a new Pages build automatically.
    password). Supabase Auth creates the user, and the trigger adds their row to
    `profiles`.
 3. Log in. The dashboard should load your leads, projects, clients, and stats
-   — all pulled from the Worker API through the `/api/*` proxy.
+   — all pulled from the Worker API via `VITE_API_URL` (cross-origin, CORS
+   enabled).
 4. (Recommended) Make the public email-capture form route to **your** account:
 
    - On the Worker, add a new var `CAPTURE_OWNER_EMAIL` = the email you just
@@ -408,7 +418,8 @@ Request** button, and completing a project can automatically send the review.
 | `/api/health` shows `"email":"console"` | `RESEND_API_KEY` secret is missing. Re-run `npx wrangler secret put RESEND_API_KEY --name=tradepro-crm-api`. |
 | Login says "Invalid credentials" even with the right password | The user's `profiles` row is missing. Re-run `0001_init.sql` (the trigger backfills it) or delete the user in Supabase → Authentication and register again. |
 | Refreshing `/projects` on the dashboard 404s | The `_redirects` file wasn't deployed. Confirm `client/public/_redirects` exists (`/*  /index.html  200`), then push again. |
-| Every `/api` call from the dashboard 404s | The proxy rule's target is wrong or out of date. Check the Worker URL in `client/public/_redirects` and re-push. |
+| Dashboard API calls return 405 Method Not Allowed | You still have an `/api/*` rule in `client/public/_redirects` (or haven't rebuilt after removing it). Cloudflare Pages rejects POST/PATCH with 405. Remove the rule and set `VITE_API_URL` to call the Worker directly. |
+| Dashboard API calls 404 / never reach the Worker | `VITE_API_URL` is missing or wrong in the Pages build env. Confirm it is `https://tradepro-crm-api.<your-subdomain>.workers.dev` (no trailing `/api`) and redeploy. |
 | CORS error "No 'Access-Control-Allow-Origin'" in the console | Set `CORS_ORIGIN` in `wrangler.jsonc` to your exact Pages URL and redeploy the Worker (Step 4.4). |
 | Emails never arrive | The domain isn't verified in Resend, or `RESEND_FROM_EMAIL` is still `onboarding@resend.dev`. Verify the domain and use a sender on it. |
 | Pages build fails with "vite: not found" | The build command must install first. Use exactly: `npm --prefix client install && npm --prefix client run build`. |
@@ -430,8 +441,9 @@ Request** button, and completing a project can automatically send the review.
 - Framework preset: **Vite**
 - Build command: `npm --prefix client install && npm --prefix client run build`
 - Build output directory: `client/dist`
-- Node version: **20**
-- Routing: `client/public/_redirects` (`/* → /index.html`, `/api/* → Worker`)
+- Node version: **22** (via `.nvmrc`; wrangler ≥ 4.148 requires Node ≥ 22)
+- Routing: `client/public/_redirects` (`/* → /index.html` SPA fallback only)
+- API base: set `VITE_API_URL = https://tradepro-crm-api.<your-subdomain>.workers.dev` in the Pages build env
 
 **Supabase**
 - Run both migrations: `0001_init.sql`, then `0002_lead_conversion.sql`

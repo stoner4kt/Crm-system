@@ -32,7 +32,12 @@ async function request<T>(path: string, options: RequestInit = {}, authed = true
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`/api${path}`, { ...options, headers });
+  // In dev (Vite) we use the same-origin proxy (/api -> localhost:4000).
+  // In a production build, VITE_API_URL points at the deployed Worker so the
+  // browser calls the API directly instead of relying on Cloudflare Pages
+  // static redirects (which reject POST / PATCH with 405).
+  const base = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+  const res = await fetch(`${base}/api${path}`, { ...options, headers });
 
   let body: unknown = null;
   try {

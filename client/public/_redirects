@@ -1,7 +1,10 @@
 # Cloudflare Pages static redirects.
 # Vite copies files from client/public/ into dist/, so this file ends up in
-# client/dist/_redirects in every Pages build (build-postprocessing).
-#  1) Forward all /api/* requests to the Worker.
-#  2) SPA fallback for React Router deep links.
-/api/*  https://tradepro-crm-api.reeqieric41.workers.dev/api/:splat  200
+# client/dist/_redirects in every Pages build.
+#
+# NOTE: The API is NOT proxied through Pages redirects. Cloudflare Pages's
+# static host rejects POST/PATCH/OPTIONS with 405, so the client talks to the
+# Worker directly via VITE_API_URL (set in the Pages build environment, e.g.
+# https://tradepro-crm-api.<sub>.workers.dev). This file only handles SPA
+# fallback for React Router deep links.
 /*      /index.html  200
