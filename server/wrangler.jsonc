@@ -10,14 +10,16 @@
   // Vars below apply to every environment. Secrets (SUPABASE_SERVICE_KEY,
   // RESEND_API_KEY, JWT_SECRET, REVIEWFLOW_SECRET, CAPTURE_SECRET) must be
   // added via wrangler secret put (never committed) or the dashboard.
+  //
+  // NOTE: SUPABASE_URL / SUPABASE_ANON_KEY are intentionally NOT listed here.
+  // They come from the Cloudflare dashboard (Variables/Secrets). Keeping an
+  // empty string here can shadow the dashboard value in some merge paths, which
+  // flips the API into local mode.
   "vars": {
     "NODE_ENV": "production",
     "PORT": "3000",
     "CORS_ORIGIN": "*",
     "LOG_LEVEL": "info",
-    // Enable the data layer + auth mode.
-    "SUPABASE_URL": "",
-    "SUPABASE_ANON_KEY": "",
     // Reviews integration (omit for a pure-CRM deploy)...
     "REVIEWFLOW_URL": "",
     "REVIEWFLOW_SECRET": ""

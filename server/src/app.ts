@@ -33,6 +33,14 @@ export function createApp(): express.Express {
       version: '1.0.0',
       store: config.supabase.configured ? 'supabase' : 'local',
       email: config.resend.configured ? 'resend' : 'console',
+      env: {
+        SUPABASE_URL: Boolean(process.env.SUPABASE_URL),
+        SUPABASE_ANON_KEY: Boolean(process.env.SUPABASE_ANON_KEY),
+        SUPABASE_SERVICE_KEY: Boolean(process.env.SUPABASE_SERVICE_KEY),
+        RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
+        NODE_ENV: process.env.NODE_ENV ?? '(unset)',
+        CORS_ORIGIN: process.env.CORS_ORIGIN ?? '(unset)',
+      },
     });
   });
 
