@@ -301,9 +301,9 @@ begin
   values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''), coalesce(new.raw_user_meta_data->>'business_name', ''), new.email)
   on conflict (id) do nothing;
 
-  insert into public.settings (id, business_name, business_type, reply_to_email)
+  insert into public.settings (user_id, business_name, business_type, reply_to_email)
   values (new.id, coalesce(new.raw_user_meta_data->>'business_name', ''), coalesce(new.raw_user_meta_data->>'business_type', ''), new.email)
-  on conflict (id) do nothing;
+  on conflict (user_id) do nothing;
 
   return new;
 end;
