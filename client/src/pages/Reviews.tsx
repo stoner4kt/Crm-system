@@ -174,6 +174,7 @@ function LeadsTab({
   const [search, setSearch] = useState('');
   const [dragOver, setDragOver] = useState<ReviewFlowLeadStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
 
   const filtered = leads.filter((l) => {
     const q = search.trim().toLowerCase();
@@ -187,7 +188,7 @@ function LeadsTab({
 
   const groups = Object.fromEntries(REVIEW_STATUSES.map((s) => [s, filtered.filter((l) => l.status === s)])) as Record<ReviewFlowLeadStatus, ReviewFlowLead[]>;
 
-  const hasPending = leads.some((l) => l.status === 'complete' && l.review_send_after && l.review_send_after <= new Date().toISOString());
+  const pendingLeads = leads.filter((l) => l.status === 'complete' && l.review_send_after && l.review_send_after <= new Date().toISOString());
 
   const move = async (leadId: string, status: ReviewFlowLeadStatus) => {
     setBusy(true);
@@ -200,6 +201,23 @@ function LeadsTab({
     } finally {
       setBusy(false);
     }
+  };
+
+  const sendAllPending = async () => {
+    setSendingAll(true);
+    let ok = 0;
+    let failed = 0;
+    for (const lead of pendingLeads) {
+      try {
+        await api.sendReviewFlowLeadReview(lead.id);
+        ok += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    setSendingAll(false);
+    onToast(`${ok} review${ok === 1 ? '' : 's'} sent${failed ? `, ${failed} failed` : ''}.`, failed ? 'error' : 'success');
+    await onChanged();
   };
 
   return (
@@ -217,9 +235,9 @@ function LeadsTab({
           />
         </div>
         <div className="flex items-center gap-2.5">
-          {hasPending && (
-            <Button variant="secondary" onClick={() => onToast('Use the lead rows to send each pending review.', 'info')}>
-              Pending reviews ready
+          {pendingLeads.length > 0 && (
+            <Button variant="secondary" onClick={() => void sendAllPending()} disabled={sendingAll}>
+              {sendingAll ? 'Sending…' : `Send ${pendingLeads.length} Pending Review${pendingLeads.length === 1 ? '' : 's'}`}
             </Button>
           )}
           <Button onClick={onAdd}>+ Add Lead</Button>
