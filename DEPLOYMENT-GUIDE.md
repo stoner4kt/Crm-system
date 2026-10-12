@@ -370,26 +370,24 @@ ReviewFlow is a second Supabase project that sends review-request emails. The
 CRM repo already contains the dashboard UI and the server bridge for it. To
 turn it on:
 
-1. In `server/wrangler.jsonc`, set the URL of your ReviewFlow project:
+1. In Cloudflare → your Worker (`tradepro-crm-api`) → **Settings → Variables
+   and Secrets**, add:
 
-   ```jsonc
-   "REVIEWFLOW_URL": "https://<reviewflow-project-ref>.supabase.co",
-   ```
+   | Name | Type | Value |
+   | --- | --- | --- |
+   | `REVIEWFLOW_URL` | Variable | `https://<reviewflow-project-ref>.supabase.co` |
+   | `REVIEWFLOW_SECRET` | Secret | any shared value (must match `INTEGRATION_SECRET` on the functions below) |
 
-2. Set the matching secret (must be non-empty to enable the feature):
+   Both must be non-empty to enable the feature. Empty-string placeholders were
+   removed from `wrangler.jsonc` so they cannot shadow these dashboard values.
 
-   ```bash
-   cd server
-   npx wrangler secret put REVIEWFLOW_SECRET --name=tradepro-crm-api
-   ```
-
-3. Redeploy the Worker:
+2. Redeploy the Worker so it picks up the new values:
 
    ```bash
    npm run deploy:worker
    ```
 
-4. In Cloudflare Pages → your project → **Settings** → **Environment
+3. In Cloudflare Pages → your project → **Settings** → **Environment
    variables** → **Production**, add:
 
    | Name | Value |
@@ -400,10 +398,27 @@ turn it on:
    re-deploy the Pages project afterwards (via the dashboard's **Retry
    deployment** button or a new push).
 
-5. The ReviewFlow Supabase project must expose these edge functions:
+4. The ReviewFlow Supabase project must expose these edge functions:
    `integration-capture`, `integration-send-review`, `integration-lookup`, and
    an `INTEGRATION_SECRET` env var **equal to** the `REVIEWFLOW_SECRET` you set
-   on the Worker.
+   on the Worker. These functions live in the
+   `stoner4kt/Reviews-System-` repo under `supabase/functions/`. To install
+   them on your ReviewFlow project:
+
+   ```bash
+   git clone https://github.com/stoner4kt/Reviews-System-.git reviewflow
+   cd reviewflow
+   npx supabase link --project-ref <YOUR_REVIEWFLOW_REF>
+   npx supabase db push                  # applies the CRM-integration migration
+   npx supabase functions deploy integration-capture
+   npx supabase functions deploy integration-send-review
+   npx supabase functions deploy integration-lookup
+   # Set the shared secret on all three (value must equal REVIEWFLOW_SECRET):
+   npx supabase secrets set INTEGRATION_SECRET=<shared-secret> --project-ref <YOUR_REVIEWFLOW_REF>
+   ```
+
+   The migration adds a `leads.external_id` column and allows `source = 'crm'`
+   so CRM-pushed leads dedupe cleanly.
 
 The Projects page then shows a review-status badge and a **Send Review
 Request** button, and completing a project can automatically send the review.

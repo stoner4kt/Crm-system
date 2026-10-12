@@ -20,9 +20,12 @@
     "PORT": "3000",
     "CORS_ORIGIN": "*",
     "LOG_LEVEL": "info",
-    // Reviews integration (omit for a pure-CRM deploy)...
-    "REVIEWFLOW_URL": "",
-    "REVIEWFLOW_SECRET": ""
+    // Reviews integration (optional — omit for a pure-CRM deploy).
+    // REVIEWFLOW_URL and REVIEWFLOW_SECRET must BOTH be set (non-empty) to
+    // enable the feature. They come from the Cloudflare dashboard (URL as a
+    // variable, SECRET as a secret) — intentionally not listed here so they
+    // cannot be committed or shadowed by empty strings.
+    "REVIEWFLOW_AUTO_SEND": "true"
   },
   "observability": {
     "enabled": true
