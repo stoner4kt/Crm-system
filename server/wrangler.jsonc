@@ -8,22 +8,38 @@
   "compatibility_date": "2026-08-04",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   //
-  // Manage runtime configuration in the Cloudflare dashboard
-  // (Worker → Settings → Variables and Secrets), NOT here:
+  // Runtime configuration for the Worker.
   //
-  //   Variables:  SUPABASE_URL, SUPABASE_ANON_KEY, REVIEWFLOW_URL,
-  //               NODE_ENV=production, CORS_ORIGIN=<pages origin>
-  //   Secrets:    SUPABASE_SERVICE_KEY, RESEND_API_KEY, JWT_SECRET,
-  //               REVIEWFLOW_SECRET
+  //   Non-secret variables  → declared in "vars" below. This is what makes the
+  //                           "vars get wiped on deploy" problem disappear:
+  //                           when a variable is in the config, wrangler sets
+  //                           it on every deploy, so there is nothing to wipe.
+  //   Secrets               → keep in the Cloudflare dashboard (Worker →
+  //                           Settings → Variables and Secrets). Secrets are
+  //                           NEVER deleted by wrangler deploys, so they are
+  //                           safe there.
   //
-  // keep_vars: by default wrangler treats the config file as the source of
-  // truth for vars and DELETES every dashboard variable on each deploy.
-  // Setting keep_vars=true preserves dashboard-set variables so they survive
-  // deploys. Secrets are never deleted by deployments regardless of this
-  // flag. There is intentionally no "vars" block below — all variables are
-  // managed from the dashboard (see DEPLOYMENT-GUIDE.md Part 3).
+  // IMPORTANT: do NOT set "keep_vars": true in this file. When keep_vars is
+  // set, wrangler first fetches the worker's existing dashboard bindings, and
+  // that metadata fetch FAILS inside the Worker Builds deploy sandbox with
+  // "Unable to fetch bindings, routes, or services metadata from the
+  // dashboard." The correct pattern for Worker Builds is: vars in config +
+  // secrets in the dashboard.
   //
-  "keep_vars": true,
+  // SUPABASE_URL, SUPABASE_ANON_KEY and REVIEWFLOW_URL are also non-secret.
+  // Before deploying, uncomment the placeholders in "vars" and fill in the
+  // real values (Step 3.2 of DEPLOYMENT-GUIDE.md):
+  //   SUPABASE_URL      → https://<crm-project-ref>.supabase.co
+  //   SUPABASE_ANON_KEY → the anon (public) key of the CRM project
+  //   REVIEWFLOW_URL    → https://<reviewflow-project-ref>.supabase.co (Part 6)
+  // If you leave them unset, the dashboard copies are removed by a bare
+  // `wrangler deploy` (dashboard-only vars are deleted; secrets are not).
+  //
+  "vars": {
+    "NODE_ENV": "production",
+    "CORS_ORIGIN": "https://crm-system-2b2.pages.dev",
+    "REVIEWFLOW_AUTO_SEND": "true"
+  },
   "observability": {
     "enabled": true
   }

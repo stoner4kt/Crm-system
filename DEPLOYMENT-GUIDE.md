@@ -149,12 +149,19 @@ npx wrangler whoami
 
 You should see your email address and Account ID.
 
-### Step 3.2 Add the non-secret values in the Cloudflare dashboard
+### Step 3.2 Add the non-secret values
 
-> `wrangler.jsonc` sets `"keep_vars": true`, so dashboard variables survive
-> every deploy (see below for why). Keep all variables and secrets in the
-> Cloudflare dashboard — the config file deliberately has **no** `vars`
-> block, so nothing here can overwrite them:
+Non-secret values live in **two** places and both must agree:
+
+1. **`server/wrangler.jsonc` → `vars`** — the source of truth for deploys.
+   `NODE_ENV`, `CORS_ORIGIN` and `REVIEWFLOW_AUTO_SEND` are already filled in.
+   Open the file and uncomment `SUPABASE_URL`, `SUPABASE_ANON_KEY` and
+   `REVIEWFLOW_URL` with the real values from Step 1.3 / Part 6. Putting
+   variables in the config is what makes variables **survive** deploys —
+   wrangler sets them every time, so there is nothing to wipe.
+2. **Cloudflare dashboard** — used for the values you keep out of the repo
+   (secrets, see Step 3.3). You may also set the same variables in the
+   dashboard; the config values take precedence on deploy.
 
 Cloudflare dashboard → **Workers & Pages → `tradepro-crm-api` → Settings →
 Variables and Secrets** → **Variables** (plaintext):
@@ -168,10 +175,12 @@ Variables and Secrets** → **Variables** (plaintext):
 | `REVIEWFLOW_URL` | `https://<reviewflow-ref>.supabase.co` only if you do Part 6 |
 | `REVIEWFLOW_AUTO_SEND` | `true` only if you do Part 6 |
 
-Only add the review vars when you do Part 6. Dashboard-added **variables and
-secrets are preserved** across deploys: secrets are never touched by wrangler,
-and `wrangler.jsonc` sets `"keep_vars": true` so plaintext variables survive
-too.
+Only add the review vars when you do Part 6. Setting these in the dashboard is
+**optional** — the values in `wrangler.jsonc` → `vars` take precedence on every
+deploy. (Do **not** rely on the dashboard to keep plaintext variables: running
+`wrangler deploy` with config-managed vars will not delete them, but any
+dashboard-only variable that is absent from the config *is* removed on the next
+deploy.) Secrets, by contrast, are never touched by deployed configs.
 
 ### Step 3.3 Add the secrets
 
@@ -206,6 +215,14 @@ What goes in each one:
 npm run build          # type-checks the code and creates server/dist
 npm run deploy:worker  # runs: wrangler deploy --config wrangler.jsonc
 ```
+
+> **If you deploy through Cloudflare Worker Builds (a build + deploy command in
+> the dashboard):** remove the "Deploy command" field (`npx wrangler deploy`)
+> in the Worker's build settings and leave only the build command
+> (`npm run build`). Workers Builds then uploads the built worker directly,
+> which **never touches dashboard variables or secrets** — nothing gets wiped,
+> and the config file is picked up automatically. The `npm run deploy:worker`
+> command above is only for deploying from your own machine.
 
 When it finishes, Cloudflare prints your Worker URL. Write it in your
 scratchpad:
@@ -376,9 +393,10 @@ turn it on:
    | `REVIEWFLOW_URL` | Variable | `https://<reviewflow-project-ref>.supabase.co` |
    | `REVIEWFLOW_SECRET` | Secret | any shared value (must match `INTEGRATION_SECRET` on the functions below) |
 
-   Both must be non-empty to enable the feature. Because `wrangler.jsonc`
-   sets `"keep_vars": true` and has no `vars` block, these dashboard values
-   are never shadowed or wiped by a config-file deploy.
+   Both must be non-empty to enable the feature. `REVIEWFLOW_URL` is a
+   plaintext variable in `wrangler.jsonc` → `vars` (Step 3.2), and
+   `REVIEWFLOW_SECRET` stays as a dashboard secret — so neither is wiped by a
+   deploy.
 
 2. Redeploy the Worker so it picks up the new values:
 
@@ -446,7 +464,8 @@ Request** button, and completing a project can automatically send the review.
 
 | Symptom | Cause and fix |
 | --- | --- |
-| Deploys wipe my dashboard **variables** but never my secrets | That is default wrangler behaviour: by default the config file is the source of truth for vars, so `wrangler deploy` deletes every dashboard variable on each deploy — but secrets are never deleted by deployments. The fix is `"keep_vars": true` in `wrangler.jsonc` (already set in this repo). If you are on an older checkout, add it and redeploy. |
+| Deploys wipe my dashboard **variables** but never my secrets | Normal wrangler behaviour: the config file is the source of truth for vars, so `wrangler deploy` deletes any dashboard variable not listed in config — but secrets are never deleted. Fix: declare the non-secret variables in `wrangler.jsonc` → `vars` (Step 3.2) and keep secrets in the dashboard. Do **not** use `"keep_vars": true` — it makes the deploy step fail with "Unable to fetch bindings, routes, or services metadata from the dashboard" inside Cloudflare Worker Builds. If you use Worker Builds, remove the "Deploy command" instead (Step 3.4 note) and nothing gets wiped. |
+| Worker Builds deploy fails: "Unable to fetch bindings, routes, or services metadata from the dashboard" | Caused by `"keep_vars": true` (now removed from `wrangler.jsonc`). The keep_vars flag makes wrangler fetch the worker's dashboard bindings first, which fails inside the build sandbox. Revert the config to this repo's version and redeploy — or remove the deploy command (Step 3.4 note) to skip wrangler entirely. |
 | `/api/health` shows `"store":"local"` | The Worker can't find Supabase keys. Re-run `npx wrangler secret put SUPABASE_SERVICE_KEY --name=tradepro-crm-api` and confirm `SUPABASE_URL`/`SUPABASE_ANON_KEY` are set as dashboard **Variables** (Step 3.2). |
 | `/api/health` shows `"email":"console"` | `RESEND_API_KEY` secret is missing. Re-run `npx wrangler secret put RESEND_API_KEY --name=tradepro-crm-api`. |
 | Login says "Invalid credentials" even with the right password | The user's `profiles` row is missing. Re-run `0001_init.sql` (the trigger backfills it) or delete the user in Supabase → Authentication and register again. |
@@ -464,9 +483,9 @@ Request** button, and completing a project can automatically send the review.
 ## Everything at a glance
 
 **Cloudflare Worker (the API)**
-- Config file: `server/wrangler.jsonc` (already in the repo; **no `vars` block**, `"keep_vars": true`)
-- Variables: set in the dashboard (Worker → Settings → Variables and Secrets) — they survive deploys thanks to `keep_vars`
-- Secrets: set in the dashboard or `npx wrangler secret put <NAME> --name=tradepro-crm-api`
+- Config file: `server/wrangler.jsonc` (already in the repo) — non-secret vars live in its `vars` block
+- Variables: declared in `wrangler.jsonc` → `vars` (survive every deploy; any dashboard-only var not in config is removed on `wrangler deploy`)
+- Secrets: set in the dashboard or `npx wrangler secret put <NAME> --name=tradepro-crm-api` (never deleted by deploys)
 - Deploy: `cd server && npm run deploy:worker`
 - Smoke test: `GET /api/health` → `{"store":"supabase","email":"resend"}`
 
