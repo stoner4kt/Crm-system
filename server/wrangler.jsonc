@@ -7,26 +7,21 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-08-04",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
-  // Vars below apply to every environment. Secrets (SUPABASE_SERVICE_KEY,
-  // RESEND_API_KEY, JWT_SECRET, REVIEWFLOW_SECRET, CAPTURE_SECRET) must be
-  // added via wrangler secret put (never committed) or the dashboard.
   //
-  // NOTE: SUPABASE_URL / SUPABASE_ANON_KEY are intentionally NOT listed here.
-  // They come from the Cloudflare dashboard (Variables/Secrets). Keeping an
-  // empty string here can shadow the dashboard value in some merge paths, which
-  // flips the API into local mode.
-  "vars": {
-    "NODE_ENV": "production",
-    "PORT": "3000",
-    "CORS_ORIGIN": "*",
-    "LOG_LEVEL": "info",
-    // Reviews integration (optional — omit for a pure-CRM deploy).
-    // REVIEWFLOW_URL and REVIEWFLOW_SECRET must BOTH be set (non-empty) to
-    // enable the feature. They come from the Cloudflare dashboard (URL as a
-    // variable, SECRET as a secret) — intentionally not listed here so they
-    // cannot be committed or shadowed by empty strings.
-    "REVIEWFLOW_AUTO_SEND": "true"
-  },
+  // IMPORTANT — there is intentionally NO "vars" block here. Wrangler treats
+  // the deployed "vars" as fully owned by the config: on every deploy it
+  // removes any dashboard variable not listed in this file. Listing even one
+  // var here would delete all of the dashboard-set variables below, flipping
+  // the API into local (in-memory) mode and disabling the review integration.
+  //
+  // All runtime configuration lives ONLY in the Cloudflare dashboard
+  // (Worker → Settings → Variables and Secrets):
+  //
+  //   Variables:  SUPABASE_URL, SUPABASE_ANON_KEY, REVIEWFLOW_URL,
+  //               NODE_ENV=production, CORS_ORIGIN=<pages origin>
+  //   Secrets:    SUPABASE_SERVICE_KEY, RESEND_API_KEY, JWT_SECRET,
+  //               REVIEWFLOW_SECRET
+  //
   "observability": {
     "enabled": true
   }

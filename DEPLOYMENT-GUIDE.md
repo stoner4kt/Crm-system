@@ -149,30 +149,30 @@ npx wrangler whoami
 
 You should see your email address and Account ID.
 
-### Step 3.2 Add the non-secret values to `wrangler.jsonc`
+### Step 3.2 Add the non-secret values in the Cloudflare dashboard
 
-Open `server/wrangler.jsonc` and edit the `vars` section so it looks like this
-(replace the placeholder URL and key with yours):
+> **Do NOT add a `vars` block to `wrangler.jsonc`.** Wrangler treats the
+> deployed variables as fully owned by the config file — on every deploy it
+> deletes any dashboard variable that is not listed in `vars`. Listing even
+> one var (e.g. just `CORS_ORIGIN`) would wipe `SUPABASE_URL` and
+> `SUPABASE_ANON_KEY` on the next deployment. Instead, the repo's
+> `wrangler.jsonc` intentionally has **no** `vars` block, and **all** variables
+> are set in the Cloudflare dashboard:
 
-```jsonc
-"vars": {
-  "NODE_ENV": "production",
-  "PORT": "3000",
-  "CORS_ORIGIN": "*",
-  "LOG_LEVEL": "info",
-  "SUPABASE_URL": "https://abcdefgh.supabase.co",
-  "SUPABASE_ANON_KEY": "eyJhbGciOi...",
-  "SUPABASE_EMAIL_REDIRECT": "https://tradepro-dashboard.pages.dev/login",
-  "REVIEWFLOW_URL": "",
-  "REVIEWFLOW_AUTO_SEND": "true"
-}
-```
+Cloudflare dashboard → **Workers & Pages → `tradepro-crm-api` → Settings →
+Variables and Secrets** → **Variables** (plaintext):
 
-(`SUPABASE_EMAIL_REDIRECT` points at the dashboard you will create in Part 4.
-If your Pages project ends up with a different name, update this later.)
+| Name | Value |
+| --- | --- |
+| `SUPABASE_URL` | `https://abcdefgh.supabase.co` (from Step 1.3) |
+| `SUPABASE_ANON_KEY` | `eyJhbGciOi...` (anon key from Step 1.3) |
+| `CORS_ORIGIN` | your Pages dashboard URL (set in Part 4, Step 4.4) |
+| `NODE_ENV` | `production` |
+| `REVIEWFLOW_URL` | `https://<reviewflow-ref>.supabase.co` only if you do Part 6 |
+| `REVIEWFLOW_AUTO_SEND` | `true` only if you do Part 6 |
 
-Leave `"CORS_ORIGIN": "*"` for now. You will replace it with your real
-dashboard address in Part 4, Step 4.4.
+Only add the review vars when you do Part 6. Dashboard-added variables **are
+preserved** across deploys now that the config file has no `vars` block.
 
 ### Step 3.3 Add the secrets
 
@@ -230,7 +230,8 @@ You should get exactly this JSON:
 Read the two flags:
 
 - `"store":"supabase"` → the Worker can see your Supabase keys. If it says
-  `"local"`, go back to Step 3.2 (vars) and Step 3.3 (`SUPABASE_SERVICE_KEY`).
+  `"local"`, go back to Step 3.2 (dashboard variables) and Step 3.3
+  (`SUPABASE_SERVICE_KEY` secret).
 - `"email":"resend"` → the Worker can see your Resend key. If it says
   `"console"`, re-run `wrangler secret put RESEND_API_KEY`.
 
@@ -313,12 +314,9 @@ Do this once, in the repo (already committed, but verify on your copy):
 1. In **Workers & Pages** → your Pages project → **Deployments**, open the
    production URL. It looks like `https://tradepro-dashboard.pages.dev`.
    Write it in your scratchpad.
-2. Edit `server/wrangler.jsonc` and set `CORS_ORIGIN` to that exact address:
-
-   ```jsonc
-   "CORS_ORIGIN": "https://tradepro-dashboard.pages.dev",
-   ```
-
+2. In Cloudflare dashboard → **Workers & Pages → `tradepro-crm-api` →
+   Settings → Variables and Secrets → Variables**, set `CORS_ORIGIN` to that
+   exact address. (Do not put it in `wrangler.jsonc` — see Step 3.2.)
 3. Redeploy the Worker:
 
    ```bash
@@ -344,9 +342,10 @@ Do this once, in the repo (already committed, but verify on your copy):
    enabled).
 4. (Recommended) Make the public email-capture form route to **your** account:
 
-   - On the Worker, add a new var `CAPTURE_OWNER_EMAIL` = the email you just
-     registered with.
-   - Add it under `vars` in `server/wrangler.jsonc`, then redeploy:
+   - In the Cloudflare dashboard → Worker → **Variables and Secrets →
+     Variables**, add `CAPTURE_OWNER_EMAIL` = the email you just registered
+     with. (Do not put it in `wrangler.jsonc` — see Step 3.2.)
+   - Redeploy the Worker:
      ```bash
      cd server
      npm run deploy:worker
@@ -378,8 +377,9 @@ turn it on:
    | `REVIEWFLOW_URL` | Variable | `https://<reviewflow-project-ref>.supabase.co` |
    | `REVIEWFLOW_SECRET` | Secret | any shared value (must match `INTEGRATION_SECRET` on the functions below) |
 
-   Both must be non-empty to enable the feature. Empty-string placeholders were
-   removed from `wrangler.jsonc` so they cannot shadow these dashboard values.
+   Both must be non-empty to enable the feature. `wrangler.jsonc` has no
+   `vars` block, so these dashboard values can never be shadowed or wiped by a
+   config-file deploy.
 
 2. Redeploy the Worker so it picks up the new values:
 
@@ -429,13 +429,13 @@ Request** button, and completing a project can automatically send the review.
 
 | Symptom | Cause and fix |
 | --- | --- |
-| `/api/health` shows `"store":"local"` | The Worker can't find Supabase keys. Re-run `npx wrangler secret put SUPABASE_SERVICE_KEY --name=tradepro-crm-api` and confirm `SUPABASE_URL`/`SUPABASE_ANON_KEY` are in `vars`. |
+| `/api/health` shows `"store":"local"` | The Worker can't find Supabase keys. Re-run `npx wrangler secret put SUPABASE_SERVICE_KEY --name=tradepro-crm-api` and confirm `SUPABASE_URL`/`SUPABASE_ANON_KEY` are set as dashboard **Variables** (Step 3.2). |
 | `/api/health` shows `"email":"console"` | `RESEND_API_KEY` secret is missing. Re-run `npx wrangler secret put RESEND_API_KEY --name=tradepro-crm-api`. |
 | Login says "Invalid credentials" even with the right password | The user's `profiles` row is missing. Re-run `0001_init.sql` (the trigger backfills it) or delete the user in Supabase → Authentication and register again. |
 | Refreshing `/projects` on the dashboard 404s | The `_redirects` file wasn't deployed. Confirm `client/public/_redirects` exists (`/*  /index.html  200`), then push again. |
 | Dashboard API calls return 405 Method Not Allowed | You still have an `/api/*` rule in `client/public/_redirects` (or haven't rebuilt after removing it). Cloudflare Pages rejects POST/PATCH with 405. Remove the rule and set `VITE_API_URL` to call the Worker directly. |
 | Dashboard API calls 404 / never reach the Worker | `VITE_API_URL` is missing or wrong in the Pages build env. Confirm it is `https://tradepro-crm-api.<your-subdomain>.workers.dev` (no trailing `/api`) and redeploy. |
-| CORS error "No 'Access-Control-Allow-Origin'" in the console | Set `CORS_ORIGIN` in `wrangler.jsonc` to your exact Pages URL and redeploy the Worker (Step 4.4). |
+| CORS error "No 'Access-Control-Allow-Origin'" in the console | Set `CORS_ORIGIN` as a dashboard Variable to your exact Pages URL and redeploy the Worker (Step 4.4). |
 | Emails never arrive | The domain isn't verified in Resend, or `RESEND_FROM_EMAIL` is still `onboarding@resend.dev`. Verify the domain and use a sender on it. |
 | Pages build fails with "vite: not found" | The build command must install first. Use exactly: `npm --prefix client install && npm --prefix client run build`. |
 | Deploy fails on a `cloudflare:node` type error | Run `npm install` at the repo root first, then `cd server && npm run typecheck:worker`. |
@@ -446,9 +446,9 @@ Request** button, and completing a project can automatically send the review.
 ## Everything at a glance
 
 **Cloudflare Worker (the API)**
-- Config file: `server/wrangler.jsonc` (already in the repo)
-- Non-secret settings: edited under `vars` in that file
-- Secrets: `npx wrangler secret put <NAME> --name=tradepro-crm-api`
+- Config file: `server/wrangler.jsonc` (already in the repo; **no `vars` block**)
+- Variables: set in the dashboard (Worker → Settings → Variables and Secrets)
+- Secrets: set in the dashboard or `npx wrangler secret put <NAME> --name=tradepro-crm-api`
 - Deploy: `cd server && npm run deploy:worker`
 - Smoke test: `GET /api/health` → `{"store":"supabase","email":"resend"}`
 
@@ -462,7 +462,7 @@ Request** button, and completing a project can automatically send the review.
 
 **Supabase**
 - Run both migrations: `0001_init.sql`, then `0002_lead_conversion.sql`
-- Keys: Project URL + anon key → Worker `vars`; service_role key → Worker secret
+- Keys: Project URL + anon key → Worker dashboard **Variables**; service_role key → Worker **secret**
 
 **Resend**
 - API key → Worker secret (`RESEND_API_KEY`)
