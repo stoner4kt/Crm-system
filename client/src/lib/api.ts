@@ -1,4 +1,4 @@
-import type { ReviewStatusPayload, SendReviewPayload } from '../types/api.js';
+import type { ReviewFlowLead, ReviewFlowOverview, ReviewFlowSettings, ReviewStatusPayload, SendReviewPayload } from '../types/api.js';
 
 export class ApiError extends Error {
   status: number;
@@ -158,4 +158,37 @@ export const sendReviewRequest = (email: string, externalId: string) =>
   request<SendReviewPayload>('/integration/reviews/send', {
     method: 'POST',
     body: JSON.stringify({ email, externalId }),
+  });
+
+// ---- ReviewFlow admin (combined dashboard, single login) ----
+export const getReviewFlowOverview = () =>
+  request<{ overview: ReviewFlowOverview }>('/integration/reviews/overview');
+
+export const createReviewFlowLead = (payload: Record<string, unknown>) =>
+  request<{ lead: ReviewFlowLead }>('/integration/reviews/leads', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateReviewFlowLead = (id: string, patch: Record<string, unknown>) =>
+  request<{ lead: ReviewFlowLead }>(`/integration/reviews/leads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+
+export const deleteReviewFlowLead = (id: string) =>
+  request<{ ok: boolean }>(`/integration/reviews/leads/${id}`, { method: 'DELETE' });
+
+export const sendReviewFlowLeadReview = (id: string) =>
+  request<{ ok: boolean; message_id?: string }>(`/integration/reviews/leads/${id}/send-review`, {
+    method: 'POST',
+  });
+
+export const getReviewFlowSettings = () =>
+  request<{ settings: ReviewFlowSettings }>('/integration/reviews/settings');
+
+export const updateReviewFlowSettings = (patch: Record<string, unknown>) =>
+  request<{ settings: ReviewFlowSettings }>('/integration/reviews/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
   });

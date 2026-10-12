@@ -140,6 +140,63 @@ export interface ReviewFlowStatus {
 export type ReviewStatusPayload = { status: ReviewFlowStatus | null };
 export type SendReviewPayload = { ok: boolean; status?: number; error?: string };
 
+// ---- ReviewFlow admin (combined dashboard, single login) ----
+export interface ReviewFlowSettings {
+  id: string;
+  business_name: string;
+  google_review_url: string;
+  review_from_name: string;
+  review_from_email: string;
+  review_reply_to_email: string;
+  auto_send_enabled: boolean;
+  auto_send_delay_hours: number;
+  widget_api_key: string;
+  email_subject_template: string;
+  email_intro_text: string;
+  email_button_text: string;
+  email_brand_color: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ReviewFlowLeadStatus = 'new' | 'in_progress' | 'complete' | 'review_sent' | 'cancelled';
+
+export interface ReviewFlowLead {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  service: string | null;
+  message: string | null;
+  source: string;
+  status: ReviewFlowLeadStatus;
+  external_id: string | null;
+  completed_at: string | null;
+  review_send_after: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReviewFlowReviewRequest {
+  id: string;
+  lead_id: string;
+  recipient_email: string;
+  recipient_name: string | null;
+  email_subject: string | null;
+  resend_message_id: string | null;
+  status: 'sent' | 'delivered' | 'bounced' | 'failed';
+  triggered_by: 'auto' | 'manual';
+  sent_at: string;
+  created_at: string;
+}
+
+export interface ReviewFlowOverview {
+  settings: ReviewFlowSettings | null;
+  leads: ReviewFlowLead[];
+  review_requests: ReviewFlowReviewRequest[];
+}
+
 export interface DashboardStats {
   totalLeads: number;
   newLeads: number;

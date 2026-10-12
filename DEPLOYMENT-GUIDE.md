@@ -399,7 +399,8 @@ turn it on:
    deployment** button or a new push).
 
 4. The ReviewFlow Supabase project must expose these edge functions:
-   `integration-capture`, `integration-send-review`, `integration-lookup`, and
+   `integration-capture`, `integration-send-review`, `integration-lookup`,
+   `integration-overview`, `integration-lead`, and `integration-settings`, plus
    an `INTEGRATION_SECRET` env var **equal to** the `REVIEWFLOW_SECRET` you set
    on the Worker. These functions live in the
    `stoner4kt/Reviews-System-` repo under `supabase/functions/`. To install
@@ -413,14 +414,31 @@ turn it on:
    npx supabase functions deploy integration-capture
    npx supabase functions deploy integration-send-review
    npx supabase functions deploy integration-lookup
-   # Set the shared secret on all three (value must equal REVIEWFLOW_SECRET):
+   npx supabase functions deploy integration-overview
+   npx supabase functions deploy integration-lead
+   npx supabase functions deploy integration-settings
+   # Set the shared secret on all six (value must equal REVIEWFLOW_SECRET):
    npx supabase secrets set INTEGRATION_SECRET=<shared-secret> --project-ref <YOUR_REVIEWFLOW_REF>
    ```
 
    The migration adds a `leads.external_id` column and allows `source = 'crm'`
    so CRM-pushed leads dedupe cleanly.
 
-The Projects page then shows a review-status badge and a **Send Review
+The **Reviews** page (sidebar → **Reviews**) is the full ReviewFlow admin
+inside the CRM with your single CRM login. It has five tabs:
+
+- **Overview** — lead totals, active jobs, reviews sent, awaiting review.
+- **Leads** — the ReviewFlow pipeline board (drag cards between columns to
+  change status). Click a lead to edit it, delete it, or send its review
+  request. Use **+ Add Lead** to create one manually.
+- **Review History** — every review email sent, with status and a **Resend**
+  action for bounced/failed sends.
+- **Email Builder** — edit the subject, intro, button text and brand colour
+  with a live preview.
+- **Settings** — business name, Google review URL, from/reply-to addresses,
+  auto-send toggle + delay, and the widget API key.
+
+The Projects page also shows a review-status badge and a **Send Review
 Request** button, and completing a project can automatically send the review.
 
 ---
