@@ -38,6 +38,8 @@ export function createApp(): express.Express {
         SUPABASE_ANON_KEY: Boolean(process.env.SUPABASE_ANON_KEY),
         SUPABASE_SERVICE_KEY: Boolean(process.env.SUPABASE_SERVICE_KEY),
         RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
+        REVIEWFLOW_URL: Boolean(process.env.REVIEWFLOW_URL),
+        REVIEWFLOW_SECRET: Boolean(process.env.REVIEWFLOW_SECRET),
         NODE_ENV: process.env.NODE_ENV ?? '(unset)',
         CORS_ORIGIN: process.env.CORS_ORIGIN ?? '(unset)',
       },
