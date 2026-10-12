@@ -269,3 +269,7 @@ export async function fetchReviewFlowSettings(): Promise<{ ok: boolean; status: 
 export async function updateReviewFlowSettings(patch: Record<string, unknown>): Promise<{ ok: boolean; status: number; body?: { settings?: ReviewFlowSettings; error?: string } }> {
   return requestJson('integration-settings', 'POST', patch);
 }
+
+export async function rotateReviewFlowWidgetKey(): Promise<{ ok: boolean; status: number; body?: { widget_api_key?: string; error?: string } }> {
+  return requestJson('integration-settings', 'POST', undefined, '/rotate-key');
+}

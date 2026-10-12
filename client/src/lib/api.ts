@@ -192,3 +192,8 @@ export const updateReviewFlowSettings = (patch: Record<string, unknown>) =>
     method: 'PATCH',
     body: JSON.stringify(patch),
   });
+
+export const rotateReviewFlowWidgetKey = () =>
+  request<{ widget_api_key: string }>('/integration/reviews/settings/rotate-key', {
+    method: 'POST',
+  });

@@ -609,8 +609,24 @@ ReviewFlow.capture({ first_name: 'Jane', last_name: 'Smith', email: 'jane@exampl
   }, [settings.widget_api_key]);
 
   const [widgetTab, setWidgetTab] = useState('script');
-  const [copied, setCopied] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  const handleRegenerate = async () => {
+    if (!confirmRegen) { setConfirmRegen(true); return; }
+    setRegenerating(true);
+    try {
+      const res = await api.rotateReviewFlowWidgetKey();
+      onSettingsUpdated({ ...settings, widget_api_key: res.widget_api_key });
+      onToast('API key regenerated. The old key no longer works.', 'success');
+      setConfirmRegen(false);
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : 'Failed to regenerate API key', 'error');
+      setConfirmRegen(false);
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -696,6 +712,27 @@ ReviewFlow.capture({ first_name: 'Jane', last_name: 'Smith', email: 'jane@exampl
             ))}
           </div>
           <pre className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-700">{widgets.find((w) => w.url === widgetTab)?.code}</pre>
+
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Widget API key</p>
+                <p className="mt-0.5 text-xs text-slate-500">Authenticates widget submissions. Rotating it immediately invalidates the old key.</p>
+              </div>
+              <button
+                onClick={() => void handleRegenerate()}
+                disabled={regenerating}
+                className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                  confirmRegen
+                    ? 'border-rose-600 bg-rose-600 text-white hover:bg-rose-500'
+                    : 'border-rose-200 text-rose-600 hover:bg-rose-50'
+                }`}
+              >
+                {confirmRegen ? 'Confirm — old key stops working' : regenerating ? 'Regenerating…' : 'Regenerate API key'}
+              </button>
+            </div>
+            <p className="mt-3 break-all text-[11px] font-mono text-slate-500">{settings.widget_api_key || '—'}</p>
+          </div>
         </Card>
       </div>
     </div>

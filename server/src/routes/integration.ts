@@ -9,6 +9,7 @@ import {
   fetchReviewFlowSettings,
   fetchReviewStatus,
   reviewflowEnabled,
+  rotateReviewFlowWidgetKey,
   sendReviewFlowLeadReview,
   sendReviewRequest,
   updateReviewFlowLead,
@@ -162,6 +163,20 @@ export function integrationRoutes(store: Store): Router {
         return sendError(res, status, result.body?.error || 'Failed to update settings');
       }
       res.json({ settings: result.body?.settings });
+    }),
+  );
+
+  // Rotate the ReviewFlow widget API key (invalidates any previous key).
+  router.post(
+    '/reviews/settings/rotate-key',
+    asyncHandler(async (_req, res) => {
+      if (!reviewflowEnabled()) return sendError(res, 404, 'ReviewFlow integration is not enabled');
+      const result = await rotateReviewFlowWidgetKey();
+      if (!result.ok) {
+        const status = result.status && result.status < 500 ? result.status : 502;
+        return sendError(res, status, result.body?.error || 'Failed to rotate widget API key');
+      }
+      res.json({ widget_api_key: result.body?.widget_api_key });
     }),
   );
 
