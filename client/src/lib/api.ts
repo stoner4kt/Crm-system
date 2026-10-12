@@ -37,7 +37,20 @@ async function request<T>(path: string, options: RequestInit = {}, authed = true
   // browser calls the API directly instead of relying on Cloudflare Pages
   // static redirects (which reject POST / PATCH with 405).
   const base = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
-  const res = await fetch(`${base}/api${path}`, { ...options, headers });
+  const controller = new AbortController();
+  const timeoutMs = Number(import.meta.env.VITE_API_TIMEOUT_MS || 20000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`${base}/api${path}`, { ...options, headers, signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timer);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(599, `Request timed out after ${timeoutMs / 1000}s`);
+    }
+    throw err;
+  }
+  clearTimeout(timer);
 
   let body: unknown = null;
   try {

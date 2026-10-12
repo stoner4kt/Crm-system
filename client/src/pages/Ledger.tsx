@@ -12,8 +12,14 @@ export default function LedgerPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void api.listCaptures().then((r) => setCaptures(r.captures)).catch((e) => setError(e instanceof Error ? e.message : 'Failed to load captures'));
-    void api.listEmailLogs().then((r) => setLogs(r.emailLogs)).catch((e) => setError(e instanceof Error ? e.message : 'Failed to load email log'));
+    let cancelled = false;
+    void api.listCaptures()
+      .then((r) => { if (!cancelled) setCaptures(r.captures); })
+      .catch((e) => { if (!cancelled) { setCaptures([]); setError((prev) => prev || (e instanceof Error ? e.message : 'Failed to load captures')); } });
+    void api.listEmailLogs()
+      .then((r) => { if (!cancelled) setLogs(r.emailLogs); })
+      .catch((e) => { if (!cancelled) { setLogs([]); setError((prev) => prev || (e instanceof Error ? e.message : 'Failed to load email log')); } });
+    return () => { cancelled = true; };
   }, []);
 
   const capturesNull = captures ?? [];

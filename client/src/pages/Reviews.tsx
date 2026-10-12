@@ -616,13 +616,50 @@ function ReviewSettingsTab({ settings, onSettingsUpdated, onToast }: {
     const appUrl = (import.meta.env.VITE_APP_URL as string) || 'https://your-app.pages.dev';
     const widgetSrc = `${appUrl.replace(/\/$/, '')}/widget.js`;
     const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://<ref>.supabase.co';
+    const key = settings.widget_api_key || '';
     const script = `<!-- Paste this before the closing </body> tag -->
-<script src="${widgetSrc}" data-api-key="${settings.widget_api_key}" data-supabase-url="${supabaseUrl}" data-position="bottom-right" data-color="#0ea5e9" data-button-text="Get in Touch"></script>`;
+<script src="${widgetSrc}" data-api-key="${key}" data-supabase-url="${supabaseUrl}" data-position="bottom-right" data-color="#0ea5e9" data-button-text="Get in Touch"></script>`;
     const capture = `// For use with your existing contact form
 ReviewFlow.capture({ first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com', phone: '0821234567', service: 'Plumbing repair', message: 'Optional notes' });`;
+    const nextjs = `npm install @conextsol/reviewflow-widget
+
+// app/layout.tsx
+import { ReviewFlowWidget } from '@conextsol/reviewflow-widget';
+
+export default function Layout({ children }) {
+  return (
+    <>
+      {children}
+      <ReviewFlowWidget apiKey="${key}" />
+    </>
+  );
+}`;
+    const htmlForm = `<!-- Complete drop-in contact form -->
+<form id="reviewflow-contact" onsubmit="handleReviewFlowSubmit(event)">
+  <input name="first_name" placeholder="First name" />
+  <input name="last_name" placeholder="Last name" />
+  <input name="email" type="email" placeholder="Email" required />
+  <input name="phone" placeholder="Phone" />
+  <input name="service" placeholder="Service" />
+  <textarea name="message" placeholder="Message"></textarea>
+  <button type="submit">Send</button>
+</form>
+
+<script>
+async function handleReviewFlowSubmit(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const data = Object.fromEntries(new FormData(form));
+  await ReviewFlow.capture(data);
+  form.reset();
+  alert("Thanks — we'll be in touch soon!");
+}
+</script>`;
     return [
       { url: 'script', title: 'Script Tag', code: script },
       { url: 'capture', title: 'Capture Function', code: capture },
+      { url: 'nextjs', title: 'Next.js', code: nextjs },
+      { url: 'html', title: 'HTML Form', code: htmlForm },
     ];
   }, [settings.widget_api_key]);
 
