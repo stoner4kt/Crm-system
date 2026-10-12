@@ -151,13 +151,10 @@ You should see your email address and Account ID.
 
 ### Step 3.2 Add the non-secret values in the Cloudflare dashboard
 
-> **Do NOT add a `vars` block to `wrangler.jsonc`.** Wrangler treats the
-> deployed variables as fully owned by the config file — on every deploy it
-> deletes any dashboard variable that is not listed in `vars`. Listing even
-> one var (e.g. just `CORS_ORIGIN`) would wipe `SUPABASE_URL` and
-> `SUPABASE_ANON_KEY` on the next deployment. Instead, the repo's
-> `wrangler.jsonc` intentionally has **no** `vars` block, and **all** variables
-> are set in the Cloudflare dashboard:
+> `wrangler.jsonc` sets `"keep_vars": true`, so dashboard variables survive
+> every deploy (see below for why). Keep all variables and secrets in the
+> Cloudflare dashboard — the config file deliberately has **no** `vars`
+> block, so nothing here can overwrite them:
 
 Cloudflare dashboard → **Workers & Pages → `tradepro-crm-api` → Settings →
 Variables and Secrets** → **Variables** (plaintext):
@@ -171,8 +168,10 @@ Variables and Secrets** → **Variables** (plaintext):
 | `REVIEWFLOW_URL` | `https://<reviewflow-ref>.supabase.co` only if you do Part 6 |
 | `REVIEWFLOW_AUTO_SEND` | `true` only if you do Part 6 |
 
-Only add the review vars when you do Part 6. Dashboard-added variables **are
-preserved** across deploys now that the config file has no `vars` block.
+Only add the review vars when you do Part 6. Dashboard-added **variables and
+secrets are preserved** across deploys: secrets are never touched by wrangler,
+and `wrangler.jsonc` sets `"keep_vars": true` so plaintext variables survive
+too.
 
 ### Step 3.3 Add the secrets
 
@@ -377,9 +376,9 @@ turn it on:
    | `REVIEWFLOW_URL` | Variable | `https://<reviewflow-project-ref>.supabase.co` |
    | `REVIEWFLOW_SECRET` | Secret | any shared value (must match `INTEGRATION_SECRET` on the functions below) |
 
-   Both must be non-empty to enable the feature. `wrangler.jsonc` has no
-   `vars` block, so these dashboard values can never be shadowed or wiped by a
-   config-file deploy.
+   Both must be non-empty to enable the feature. Because `wrangler.jsonc`
+   sets `"keep_vars": true` and has no `vars` block, these dashboard values
+   are never shadowed or wiped by a config-file deploy.
 
 2. Redeploy the Worker so it picks up the new values:
 
@@ -447,6 +446,7 @@ Request** button, and completing a project can automatically send the review.
 
 | Symptom | Cause and fix |
 | --- | --- |
+| Deploys wipe my dashboard **variables** but never my secrets | That is default wrangler behaviour: by default the config file is the source of truth for vars, so `wrangler deploy` deletes every dashboard variable on each deploy — but secrets are never deleted by deployments. The fix is `"keep_vars": true` in `wrangler.jsonc` (already set in this repo). If you are on an older checkout, add it and redeploy. |
 | `/api/health` shows `"store":"local"` | The Worker can't find Supabase keys. Re-run `npx wrangler secret put SUPABASE_SERVICE_KEY --name=tradepro-crm-api` and confirm `SUPABASE_URL`/`SUPABASE_ANON_KEY` are set as dashboard **Variables** (Step 3.2). |
 | `/api/health` shows `"email":"console"` | `RESEND_API_KEY` secret is missing. Re-run `npx wrangler secret put RESEND_API_KEY --name=tradepro-crm-api`. |
 | Login says "Invalid credentials" even with the right password | The user's `profiles` row is missing. Re-run `0001_init.sql` (the trigger backfills it) or delete the user in Supabase → Authentication and register again. |
@@ -464,8 +464,8 @@ Request** button, and completing a project can automatically send the review.
 ## Everything at a glance
 
 **Cloudflare Worker (the API)**
-- Config file: `server/wrangler.jsonc` (already in the repo; **no `vars` block**)
-- Variables: set in the dashboard (Worker → Settings → Variables and Secrets)
+- Config file: `server/wrangler.jsonc` (already in the repo; **no `vars` block**, `"keep_vars": true`)
+- Variables: set in the dashboard (Worker → Settings → Variables and Secrets) — they survive deploys thanks to `keep_vars`
 - Secrets: set in the dashboard or `npx wrangler secret put <NAME> --name=tradepro-crm-api`
 - Deploy: `cd server && npm run deploy:worker`
 - Smoke test: `GET /api/health` → `{"store":"supabase","email":"resend"}`

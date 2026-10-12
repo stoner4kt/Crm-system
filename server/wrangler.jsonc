@@ -8,20 +8,22 @@
   "compatibility_date": "2026-08-04",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
   //
-  // IMPORTANT — there is intentionally NO "vars" block here. Wrangler treats
-  // the deployed "vars" as fully owned by the config: on every deploy it
-  // removes any dashboard variable not listed in this file. Listing even one
-  // var here would delete all of the dashboard-set variables below, flipping
-  // the API into local (in-memory) mode and disabling the review integration.
-  //
-  // All runtime configuration lives ONLY in the Cloudflare dashboard
-  // (Worker → Settings → Variables and Secrets):
+  // Manage runtime configuration in the Cloudflare dashboard
+  // (Worker → Settings → Variables and Secrets), NOT here:
   //
   //   Variables:  SUPABASE_URL, SUPABASE_ANON_KEY, REVIEWFLOW_URL,
   //               NODE_ENV=production, CORS_ORIGIN=<pages origin>
   //   Secrets:    SUPABASE_SERVICE_KEY, RESEND_API_KEY, JWT_SECRET,
   //               REVIEWFLOW_SECRET
   //
+  // keep_vars: by default wrangler treats the config file as the source of
+  // truth for vars and DELETES every dashboard variable on each deploy.
+  // Setting keep_vars=true preserves dashboard-set variables so they survive
+  // deploys. Secrets are never deleted by deployments regardless of this
+  // flag. There is intentionally no "vars" block below — all variables are
+  // managed from the dashboard (see DEPLOYMENT-GUIDE.md Part 3).
+  //
+  "keep_vars": true,
   "observability": {
     "enabled": true
   }
