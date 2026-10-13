@@ -1,17 +1,13 @@
 /**
- * Provision the same user (email + password) in both Supabase Auth projects -
- * the CRM project and the ReviewFlow project - so a combined customer can sign
- * into both dashboards with identical credentials.
+ * Provision a user (email + password) in the CRM Supabase Auth project.
 
  * Usage (also see the README):  cd server && npx tsx scripts/provision-user.ts
  * with these env vars:
  *   SUPABASE_URL + SUPABASE_SERVICE_KEY        (CRM Supabase project)
- *   REVIEWFLOW_SUPABASE_URL + REVIEWFLOW_SUPABASE_SERVICE_KEY  (ReviewFlow Supabase project)
- *   PROVISION_EMAIL + PROVISION_PASSWORD      (the shared login)
+ *   PROVISION_EMAIL + PROVISION_PASSWORD      (the login to create)
  *
- * Each user is created via auth.admin.createUser() with email confirmed. If that
- * email already exists inbox a project, that project is skipped (no password reset).
- * Secrets flow via env vars only - nothing is stored in code or git.
+ * The user is created via auth.admin.createUser() with email confirmed. If the
+ * email already exists, creation is skipped. Secrets flow via env vars only.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -37,14 +33,10 @@ function loadEnv(): Env {
   const crmKey = (process.env.SUPABASE_SERVICE_KEY || '').trim();
   if (crmUrl && crmKey) targets.push({ url: crmUrl, serviceKey: crmKey, label: 'CRM' });
 
-  const flowUrl = (process.env.REVIEWFLOW_SUPABASE_URL || '').trim();
-  const flowKey = (process.env.REVIEWFLOW_SUPABASE_SERVICE_KEY || '').trim();
-  if (flowUrl && flowKey) targets.push({ url: flowUrl, serviceKey: flowKey, label: 'ReviewFlow' });
-
   const missing: string[] = [];
   if (!email) missing.push('PROVISION_EMAIL');
   if (!password) missing.push('PROVISION_PASSWORD');
-  if (targets.length < 2) missing.push('SUPABASE_URL/SERVICE_KEY and REVIEWFLOW_SUPABASE_URL/SERVICE_KEY');
+  if (targets.length < 1) missing.push('SUPABASE_URL/SERVICE_KEY');
   if (missing.length) {
     console.error(`Missing or incomplete env vars: ${missing.join(', ')}`);
     process.exit(1);
@@ -77,7 +69,7 @@ async function main(): Promise<void> {
   for (const target of env.targets) {
     await provision(target, env.email, env.password);
   }
-  console.log('Done. Both dashboards now accept the same email + password.');
+  console.log('Done.');
 }
 
 main().catch((err: unknown) => {

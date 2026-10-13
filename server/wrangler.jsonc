@@ -26,19 +26,12 @@
   // dashboard." The correct pattern for Worker Builds is: vars in config +
   // secrets in the dashboard.
   //
-  // SUPABASE_URL, SUPABASE_ANON_KEY and REVIEWFLOW_URL are also non-secret.
-  // Before deploying, uncomment the placeholders in "vars" and fill in the
-  // real values (Step 3.2 of DEPLOYMENT-GUIDE.md):
-  //   SUPABASE_URL      → https://<crm-project-ref>.supabase.co
-  //   SUPABASE_ANON_KEY → the anon (public) key of the CRM project
-  //   REVIEWFLOW_URL    → https://<reviewflow-project-ref>.supabase.co (Part 6)
-  // If you leave them unset, the dashboard copies are removed by a bare
-  // `wrangler deploy` (dashboard-only vars are deleted; secrets are not).
-  //
   "vars": {
     "NODE_ENV": "production",
-    "CORS_ORIGIN": "https://crm-system-2b2.pages.dev",
-    "REVIEWFLOW_AUTO_SEND": "true"
+    "CORS_ORIGIN": "https://crm-system-2b2.pages.dev"
+    // Uncomment before deploying (Step 3.2 of DEPLOYMENT-GUIDE.md):
+    // "SUPABASE_URL": "https://<crm-project-ref>.supabase.co",
+    // "SUPABASE_ANON_KEY": "the anon (public) key of the CRM project",
   },
   "observability": {
     "enabled": true

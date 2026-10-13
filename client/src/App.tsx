@@ -9,7 +9,6 @@ import ClientsPage from './pages/Clients.js';
 import ProjectsPage from './pages/Projects.js';
 import SettingsPage from './pages/Settings.js';
 import LedgerPage from './pages/Ledger.js';
-import ReviewsPage from './pages/Reviews.js';
 
 function Protected({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -73,7 +72,6 @@ export default function App() {
             <Route path="/leads" element={<LeadsPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/ledger" element={<LedgerPage />} />
           </Route>

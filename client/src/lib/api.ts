@@ -1,4 +1,3 @@
-import type { ReviewFlowLead, ReviewFlowOverview, ReviewFlowSettings, ReviewStatusPayload, SendReviewPayload } from '../types/api.js';
 
 export class ApiError extends Error {
   status: number;
@@ -158,55 +157,3 @@ export const listCaptures = () =>
 
 export const listEmailLogs = () =>
   request<{ emailLogs: import('../types/api.js').EmailLog[] }>('/captures/emails');
-
-// ---- ReviewFlow integration (404s when the flag / env vars are absent; call
-// guards are in the pages so a pure-CRM build never hits these) ----
-export const isReviewsIntegrationEnabled = (): boolean =>
-  import.meta.env.VITE_ENABLE_REVIEWS_INTEGRATION === 'true';
-
-export const getReviewStatus = (email: string) =>
-  request<ReviewStatusPayload>(`/integration/reviews/status?email=${encodeURIComponent(email)}`);
-
-export const sendReviewRequest = (email: string, externalId: string) =>
-  request<SendReviewPayload>('/integration/reviews/send', {
-    method: 'POST',
-    body: JSON.stringify({ email, externalId }),
-  });
-
-// ---- ReviewFlow admin (combined dashboard, single login) ----
-export const getReviewFlowOverview = () =>
-  request<{ overview: ReviewFlowOverview }>('/integration/reviews/overview');
-
-export const createReviewFlowLead = (payload: Record<string, unknown>) =>
-  request<{ lead: ReviewFlowLead }>('/integration/reviews/leads', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-
-export const updateReviewFlowLead = (id: string, patch: Record<string, unknown>) =>
-  request<{ lead: ReviewFlowLead }>(`/integration/reviews/leads/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(patch),
-  });
-
-export const deleteReviewFlowLead = (id: string) =>
-  request<{ ok: boolean }>(`/integration/reviews/leads/${id}`, { method: 'DELETE' });
-
-export const sendReviewFlowLeadReview = (id: string) =>
-  request<{ ok: boolean; message_id?: string }>(`/integration/reviews/leads/${id}/send-review`, {
-    method: 'POST',
-  });
-
-export const getReviewFlowSettings = () =>
-  request<{ settings: ReviewFlowSettings }>('/integration/reviews/settings');
-
-export const updateReviewFlowSettings = (patch: Record<string, unknown>) =>
-  request<{ settings: ReviewFlowSettings }>('/integration/reviews/settings', {
-    method: 'PATCH',
-    body: JSON.stringify(patch),
-  });
-
-export const rotateReviewFlowWidgetKey = () =>
-  request<{ widget_api_key: string }>('/integration/reviews/settings/rotate-key', {
-    method: 'POST',
-  });

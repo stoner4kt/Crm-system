@@ -16,7 +16,6 @@ import { projectsRoutes } from './routes/projects.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { settingsRoutes } from './routes/settings.js';
 import { capturesRoutes } from './routes/captures.js';
-import { integrationRoutes } from './routes/integration.js';
 
 export function createApp(): express.Express {
   const app = express();
@@ -38,8 +37,6 @@ export function createApp(): express.Express {
         SUPABASE_ANON_KEY: Boolean(process.env.SUPABASE_ANON_KEY),
         SUPABASE_SERVICE_KEY: Boolean(process.env.SUPABASE_SERVICE_KEY),
         RESEND_API_KEY: Boolean(process.env.RESEND_API_KEY),
-        REVIEWFLOW_URL: Boolean(process.env.REVIEWFLOW_URL),
-        REVIEWFLOW_SECRET: Boolean(process.env.REVIEWFLOW_SECRET),
         NODE_ENV: process.env.NODE_ENV ?? '(unset)',
         CORS_ORIGIN: process.env.CORS_ORIGIN ?? '(unset)',
       },
@@ -59,7 +56,6 @@ export function createApp(): express.Express {
   app.use('/api/settings', settingsRoutes(store));
   app.use('/api/capture', capturesRoutes(store));
   app.use('/api/captures', capturesRoutes(store));
-  app.use('/api/integration', integrationRoutes(store));
 
   // Serve the built client in production.
   const clientDist = path.resolve(process.cwd(), '../client/dist');

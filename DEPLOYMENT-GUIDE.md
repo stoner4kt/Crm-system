@@ -17,9 +17,8 @@ Work through the parts **top to bottom, in order**:
 3. [Part 3 — Deploy the API to a Cloudflare Worker](#part-3--deploy-the-api-to-a-cloudflare-worker)
 4. [Part 4 — Deploy the dashboard to Cloudflare Pages](#part-4--deploy-the-dashboard-to-cloudflare-pages)
 5. [Part 5 — Verify everything works](#part-5--verify-everything-works)
-6. [Part 6 — (Optional) ReviewFlow combined dashboard](#part-6--optional-reviewflow-combined-dashboard)
-7. [Troubleshooting](#troubleshooting)
-8. [Everything at a glance](#everything-at-a-glance)
+6. [Troubleshooting](#troubleshooting)
+7. [Everything at a glance](#everything-at-a-glance)
 
 ---
 
@@ -154,11 +153,11 @@ You should see your email address and Account ID.
 Non-secret values live in **two** places and both must agree:
 
 1. **`server/wrangler.jsonc` → `vars`** — the source of truth for deploys.
-   `NODE_ENV`, `CORS_ORIGIN` and `REVIEWFLOW_AUTO_SEND` are already filled in.
-   Open the file and uncomment `SUPABASE_URL`, `SUPABASE_ANON_KEY` and
-   `REVIEWFLOW_URL` with the real values from Step 1.3 / Part 6. Putting
-   variables in the config is what makes variables **survive** deploys —
-   wrangler sets them every time, so there is nothing to wipe.
+   `NODE_ENV` and `CORS_ORIGIN` are already filled in. Open the file and
+   uncomment `SUPABASE_URL` and `SUPABASE_ANON_KEY` with the real values from
+   Step 1.3. Putting variables in the config is what makes variables
+   **survive** deploys — wrangler sets them every time, so there is nothing to
+   wipe.
 2. **Cloudflare dashboard** — used for the values you keep out of the repo
    (secrets, see Step 3.3). You may also set the same variables in the
    dashboard; the config values take precedence on deploy.
@@ -172,15 +171,13 @@ Variables and Secrets** → **Variables** (plaintext):
 | `SUPABASE_ANON_KEY` | `eyJhbGciOi...` (anon key from Step 1.3) |
 | `CORS_ORIGIN` | your Pages dashboard URL (set in Part 4, Step 4.4) |
 | `NODE_ENV` | `production` |
-| `REVIEWFLOW_URL` | `https://<reviewflow-ref>.supabase.co` only if you do Part 6 |
-| `REVIEWFLOW_AUTO_SEND` | `true` only if you do Part 6 |
 
-Only add the review vars when you do Part 6. Setting these in the dashboard is
-**optional** — the values in `wrangler.jsonc` → `vars` take precedence on every
-deploy. (Do **not** rely on the dashboard to keep plaintext variables: running
-`wrangler deploy` with config-managed vars will not delete them, but any
-dashboard-only variable that is absent from the config *is* removed on the next
-deploy.) Secrets, by contrast, are never touched by deployed configs.
+Setting these in the dashboard is **optional** — the values in
+`wrangler.jsonc` → `vars` take precedence on every deploy. (Do **not** rely on
+the dashboard to keep plaintext variables: running `wrangler deploy` with
+config-managed vars will not delete them, but any dashboard-only variable that
+is absent from the config *is* removed on the next deploy.) Secrets, by
+contrast, are never touched by deployed configs.
 
 ### Step 3.3 Add the secrets
 
@@ -193,7 +190,6 @@ npx wrangler secret put SUPABASE_SERVICE_KEY --name=tradepro-crm-api
 npx wrangler secret put RESEND_API_KEY        --name=tradepro-crm-api
 npx wrangler secret put JWT_SECRET            --name=tradepro-crm-api
 npx wrangler secret put CAPTURE_SECRET        --name=tradepro-crm-api
-npx wrangler secret put REVIEWFLOW_SECRET     --name=tradepro-crm-api
 ```
 
 What goes in each one:
@@ -204,7 +200,6 @@ What goes in each one:
 | `RESEND_API_KEY` | the `re_...` key from Step 2.1 |
 | `JWT_SECRET` | any long random string, e.g. run `openssl rand -hex 32` |
 | `CAPTURE_SECRET` | any random string (protects your public email form) |
-| `REVIEWFLOW_SECRET` | leave blank (press Enter twice to skip) unless you use Part 6 |
 
 > The `--name=tradepro-crm-api` must match the `"name"` field in
 > `wrangler.jsonc`. If you renamed the Worker, use your name instead.
@@ -376,87 +371,6 @@ Re-check the health endpoint after all the wiring is done:
 curl https://tradepro-crm-api.<your-subdomain>.workers.dev/api/health
 # {"ok":true,"service":"tradepro-crm","version":"1.0.0","store":"supabase","email":"resend"}
 ```
-
----
-
-## Part 6 — (Optional) ReviewFlow combined dashboard
-
-ReviewFlow is a second Supabase project that sends review-request emails. The
-CRM repo already contains the dashboard UI and the server bridge for it. To
-turn it on:
-
-1. In Cloudflare → your Worker (`tradepro-crm-api`) → **Settings → Variables
-   and Secrets**, add:
-
-   | Name | Type | Value |
-   | --- | --- | --- |
-   | `REVIEWFLOW_URL` | Variable | `https://<reviewflow-project-ref>.supabase.co` |
-   | `REVIEWFLOW_SECRET` | Secret | any shared value (must match `INTEGRATION_SECRET` on the functions below) |
-
-   Both must be non-empty to enable the feature. `REVIEWFLOW_URL` is a
-   plaintext variable in `wrangler.jsonc` → `vars` (Step 3.2), and
-   `REVIEWFLOW_SECRET` stays as a dashboard secret — so neither is wiped by a
-   deploy.
-
-2. Redeploy the Worker so it picks up the new values:
-
-   ```bash
-   npm run deploy:worker
-   ```
-
-3. In Cloudflare Pages → your project → **Settings** → **Environment
-   variables** → **Production**, add:
-
-   | Name | Value |
-   | --- | --- |
-   | `VITE_ENABLE_REVIEWS_INTEGRATION` | `true` |
-
-   This is a **build-time** variable (Vite inlines it into the bundle), so
-   re-deploy the Pages project afterwards (via the dashboard's **Retry
-   deployment** button or a new push).
-
-4. The ReviewFlow Supabase project must expose these edge functions:
-   `integration-capture`, `integration-send-review`, `integration-lookup`,
-   `integration-overview`, `integration-lead`, and `integration-settings`, plus
-   an `INTEGRATION_SECRET` env var **equal to** the `REVIEWFLOW_SECRET` you set
-   on the Worker. These functions live in the
-   `stoner4kt/Reviews-System-` repo under `supabase/functions/`. To install
-   them on your ReviewFlow project:
-
-   ```bash
-   git clone https://github.com/stoner4kt/Reviews-System-.git reviewflow
-   cd reviewflow
-   npx supabase link --project-ref <YOUR_REVIEWFLOW_REF>
-   npx supabase db push                  # applies the CRM-integration migration
-   npx supabase functions deploy integration-capture
-   npx supabase functions deploy integration-send-review
-   npx supabase functions deploy integration-lookup
-   npx supabase functions deploy integration-overview
-   npx supabase functions deploy integration-lead
-   npx supabase functions deploy integration-settings
-   # Set the shared secret on all six (value must equal REVIEWFLOW_SECRET):
-   npx supabase secrets set INTEGRATION_SECRET=<shared-secret> --project-ref <YOUR_REVIEWFLOW_REF>
-   ```
-
-   The migration adds a `leads.external_id` column and allows `source = 'crm'`
-   so CRM-pushed leads dedupe cleanly.
-
-The **Reviews** page (sidebar → **Reviews**) is the full ReviewFlow admin
-inside the CRM with your single CRM login. It has five tabs:
-
-- **Overview** — lead totals, active jobs, reviews sent, awaiting review.
-- **Leads** — the ReviewFlow pipeline board (drag cards between columns to
-  change status). Click a lead to edit it, delete it, or send its review
-  request. Use **+ Add Lead** to create one manually.
-- **Review History** — every review email sent, with status and a **Resend**
-  action for bounced/failed sends.
-- **Email Builder** — edit the subject, intro, button text and brand colour
-  with a live preview.
-- **Settings** — business name, Google review URL, from/reply-to addresses,
-  auto-send toggle + delay, and the widget API key.
-
-The Projects page also shows a review-status badge and a **Send Review
-Request** button, and completing a project can automatically send the review.
 
 ---
 
